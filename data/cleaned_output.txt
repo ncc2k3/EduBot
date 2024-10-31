@@ -1347,8 +1347,8 @@ Cán bộ ra đề thi có trách nhiệm trực đề thi trong các buổi thi
 --------------------------------------------------------------------------------
 Điều 8. Trách nhiệm của người học trong các buổi thi
 1. Trước khi vào phòng thi, người học phải:
-a. Có mặt tại phòng thi trước giờ thi 15 phút để làm thủ tục vào thi. Nếu người học đến trễ quá 15 phút sau khi tính giờ làm bài sẽ không được dự thi;
-b. Chuẩn bị thẻ sinh viên/học viên hoặc CMND/CCCD để CBCT kiểm tra trong các buổi thi. Trường hợp người học không thể xác thực nhân thân thì phải có xác nhận của Phòng CTSV hoặc Phòng Đào tạo Sau Đại học. Trường hợp đặc biệt, người học được làm giấy cam đoan tại phòng thi.
+    a. Có mặt tại phòng thi trước giờ thi 15 phút để làm thủ tục vào thi. Nếu người học đến trễ quá 15 phút sau khi tính giờ làm bài sẽ không được dự thi;
+    b. Chuẩn bị thẻ sinh viên/học viên hoặc CMND/CCCD để CBCT kiểm tra trong các buổi thi. Trường hợp người học không thể xác thực nhân thân thì phải có xác nhận của Phòng CTSV hoặc Phòng Đào tạo Sau Đại học. Trường hợp đặc biệt, người học được làm giấy cam đoan tại phòng thi.
 2. Khi vào phòng thi, người học:
 a. Ngồi đúng vị trí theo quy định của CBCT, đặt thẻ sinh viên/học viên (CMND/CCCD) của mình trên mặt bàn để CBCT kiểm tra;
 b. Người học phải tự bảo quản tài sản cá nhân;
