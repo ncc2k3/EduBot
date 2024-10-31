@@ -19,7 +19,7 @@ def load_and_split_txt(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=400)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=500)
     chunks = splitter.split_text(content)
 
     return [Document(page_content=chunk, metadata={"source": file_path}) for chunk in chunks]
