@@ -4,11 +4,10 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_community.chat_models import ChatOllama
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 # Define the directory containing the text file and persistent directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(current_dir, "data", "cleaned_output.txt")  # Path to your text data
 persistent_dir = os.path.join(current_dir, 'vectorstores', 'db_chroma')
 
 # Load HuggingFace Embeddings for multilingual support
@@ -29,13 +28,14 @@ retriever = vector_db.as_retriever(
 )
 
 # # Example query from a student about the handbook
-query = "Muốn đạt loại khá, điểm trung bình cần bao nhiêu?"
+query = "Công thức tính điểm trung bình học kỳ là gì?"
 
 # Retrieve the relevant documents based on the query
 relevant_docs = retriever.invoke(query)
 
 # Display the relevant results with metadata
 print("\n--- Relevant Documents ---")
+print("Number of documents retrieved:", len(relevant_docs))
 for i, doc in enumerate(relevant_docs, 1):
     print(f"Document {i}:\n{doc.page_content}\n")
     if doc.metadata:
@@ -67,4 +67,4 @@ response = llm.invoke(final_prompt[0].content)  # final_prompt[0].content gives 
 ###  -> 
 # Display the final response
 print("\n--- LLM Response ---")
-print(response)
+print(response.content)
