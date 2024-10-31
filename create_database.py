@@ -6,8 +6,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Đường dẫn tới tệp văn bản và vector store
 current_dir = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(current_dir, "data", "cleaned_output1.txt")
-persistent_dir = os.path.join(current_dir, 'vectorstores', 'db_chroma1')
+file_path = os.path.join(current_dir, "data", "so_tay_sinh_vien.txt")
+persistent_dir = os.path.join(current_dir, 'vectorstores', 'db_chroma')
 
 # Khởi tạo Huggingface Embeddings với một model đa ngôn ngữ
 embedding_model = HuggingFaceEmbeddings(
@@ -19,7 +19,7 @@ def load_and_split_txt(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=400)
     chunks = splitter.split_text(content)
 
     return [Document(page_content=chunk, metadata={"source": file_path}) for chunk in chunks]
