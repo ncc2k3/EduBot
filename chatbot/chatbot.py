@@ -29,8 +29,8 @@ class StudentHandbookChatbot:
 
             print("Đang tạo vector store...")
             self.vectorstore = Chroma.from_documents(
-                documents=documents,
-                embedding_function=self.embedding_model,
+                documents,
+                self.embedding_model,
                 persist_directory=self.vectorstore_dir
             )
         else:
@@ -46,7 +46,7 @@ class StudentHandbookChatbot:
         """
         with open(self.file_path, "r", encoding="utf-8") as f:
             content = f.read()
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=500)
         chunks = splitter.split_text(content)
         return [Document(page_content=chunk, metadata={"source": self.file_path}) for chunk in chunks]
 

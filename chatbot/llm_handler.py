@@ -1,7 +1,8 @@
 from langchain_community.chat_models import ChatOllama
+from config import *
 
 class LLMHandler:
-    def __init__(self, model_name='qwen2.5:7b', temperature=0.7):
+    def __init__(self, model_name=MODEL_NAME, temperature=0.7):
         """
         Khởi tạo mô hình LLM với các tham số.
         """

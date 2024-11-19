@@ -1,11 +1,9 @@
 import streamlit as st
+from langchain.schema import AIMessage, HumanMessage
 from chatbot.chatbot import StudentHandbookChatbot
 from chatbot.llm_handler import LLMHandler
 from chatbot.prompt_templates import get_prompt_template
-
-# Đường dẫn file vector store
-FILE_PATH = "data/so_tay_sinh_vien.txt"
-VECTORSTORE_DIR = "vectorstores/db_chroma"
+from config import *
 
 # Khởi tạo chatbot và LLM handler
 chatbot = StudentHandbookChatbot(file_path=FILE_PATH, vectorstore_dir=VECTORSTORE_DIR)
@@ -24,19 +22,22 @@ if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 
 if "waiting_for_response" not in st.session_state:
-    st.session_state.waiting_for_response = False
+    st.session_state["waiting_for_response"] = False
 
 # Hiển thị hội thoại
-for msg in st.session_state.chat_history:
-    role = "👤" if msg["role"] == "user" else "🤖"
-    st.chat_message(role).write(msg["content"])
+for msg in st.session_state["chat_history"]:
+    if isinstance(msg, HumanMessage):
+        st.chat_message("👤").write(msg.content)
+    elif isinstance(msg, AIMessage):
+        st.chat_message("🤖").write(msg.content)
 
 # Nhập câu hỏi của người dùng
 if not st.session_state.waiting_for_response:
     prompt = st.chat_input(placeholder="Nhập câu hỏi của bạn tại đây...")
     if prompt:
         # Thêm câu hỏi vào lịch sử
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        user_message = HumanMessage(content=prompt)
+        st.session_state["chat_history"].append(user_message)
         st.chat_message("👤").write(prompt)
 
         # Ngăn người dùng nhập tiếp trong khi đang xử lý
@@ -52,16 +53,21 @@ if not st.session_state.waiting_for_response:
                 # Tạo ngữ cảnh từ tài liệu
                 context = chatbot.combine_context(documents)
 
-                # Sinh câu trả lời
+                # Sinh câu trả lời từ template
+                chat_history_text = "\n".join(
+                    f"{'Người dùng' if isinstance(msg, HumanMessage) else 'Trợ lý'}: {msg.content}"
+                    for msg in st.session_state["chat_history"]
+                )
                 answer = llm_handler.generate_answer(
                     context=context,
                     question=prompt,
-                    chat_history="\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history]),
+                    chat_history=chat_history_text,
                     prompt_template=prompt_template,
                 )
 
             # Thêm câu trả lời vào lịch sử
-            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+            ai_message = AIMessage(content=answer)
+            st.session_state["chat_history"].append(ai_message)
             st.chat_message("🤖").write(answer)
 
         # Cho phép người dùng nhập câu hỏi mới
