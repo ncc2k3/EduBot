@@ -14,8 +14,8 @@ prompt_template = get_prompt_template()
 chatbot.create_or_load_vectorstore()
 
 # Thiết lập giao diện Streamlit
-st.set_page_config(page_title="Chatbot - Sổ Tay Sinh Viên", layout="wide")
-st.title("💬 Chatbot Hỏi Đáp - Sổ Tay Sinh Viên")
+st.set_page_config(page_title="Chatbot - Hỗ Trợ Sinh Viên IT", layout="wide")
+st.title("💬 Chatbot Hỏi Đáp - Hỗ Trợ Sinh Viên IT")
 
 # Khởi tạo session state cho lịch sử hội thoại và trạng thái xử lý
 if "chat_history" not in st.session_state:

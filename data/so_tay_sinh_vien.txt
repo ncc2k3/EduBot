@@ -205,7 +205,7 @@ PHÒNG LƯU HÀNH CƠ SỞ THỦ ĐỨC
 KHOA CÔNG NGHỆ THÔNG TIN
 Thông tin chung 
 Ban Chủ nhiệm: Trưởng Khoa: TS. Đinh Bá Tiến, Phó Trưởng Khoa: TS. Lâm Quang Vũ, PGS.TS. Nguyễn Văn Vũ, ThS. Văn Chí Nam.
-Văn phòng khoa: phòng I.53, Nhà l 227 Nguyễn Văn Cừ, Q.5, TP.HCM (028) 62 884 499 (Ext: 4000) info@fit.hcmus.edu.vn.
+Văn phòng khoa: phòng I.53, Nhà I 227 Nguyễn Văn Cừ, Q.5, TP.HCM, (028) 62 884 499, (Ext: 4000), email: info@fit.hcmus.edu.vn.
 Hỗ trợ sinh viên: tlsv@fit.hcmus.edu.vn
 Giáo vụ:
 - Chương trình Chuẩn/Cử nhân tài năng: giaovu@fit.hcmus.edu.vn
@@ -250,6 +250,7 @@ NGHIÊN CỨU VÀ KHOA HỌC
 - Thực nghiệm, điều tra và khám phá tri thức. - Suy nghĩ tầm mức hệ thống.
 KIỂM CHỨNG, VẬN HÀNH, BẢO TRÌ VÀ PHÁT TRIỂN HỆ THỐNG MÁY TÍNH VÀ CÔNG NGHỆ THÔNG TIN
 
+THÔNG TIN CÁC CHƯƠNG TRÌNH ĐÀO TẠO KHOA CÔNG NGHỆ THÔNG TIN
 CÁC LĨNH VỰC ĐÀO TẠO
 CÔNG NGHỆ THÔNG TIN: CÔNG NGHỆ THÔNG TIN, MẠNG MÁY TÍNH VÀ VIỄN THÔNG
 HỆ THỐNG THÔNG TIN
@@ -276,7 +277,6 @@ Lý do bạn nên sử dụng công cụ tự đánh giá này:
 - Được kết nối với chuyên gia tư vấn tâm lý khi cần thiết
 - Cùng #FITHCMUS chăm sóc và nâng cao nhận thức về sức khỏe tinh thần của sinh viên Hãy cùng thực hiện và chia sẻ thông điệp này để cùng nhau tạo nên một cộng đồng sinh viên khỏe mạnh về tinh thần, bạn nhé!
 
-THÔNG TIN CÁC CHƯƠNG TRÌNH ĐÀO TẠO KHOA CÔNG NGHỆ THÔNG TIN
 HỌC BỔNG: Học bổng theo Quyết định 622/QĐ-KHTN của Trường Đại học Khoa học tự nhiên, ĐHQG-HCM
 - Học bổng đầu vào
 - Học bổng tân sinh viên Khoa Công nghệ thông tin
@@ -416,7 +416,8 @@ CHUẨN ĐẦU RA
 Thông tin chung
 Ban Chủ nhiệm:
 Trưởng Khoa: TS. Bùi Trọng Tú
-Phó Trưởng Khoa: TS. Đặng Lê Khoa, ThS. Cao Trần Bảo Thương Văn phòng khoa: phòng E.107, 227 Nguyễn Văn Cừ, Q.5, TPHCM (028) 38 356 464 www.fetel.hcmus.edu.vn
+Phó Trưởng Khoa: TS. Đặng Lê Khoa, ThS. Cao Trần Bảo Thương 
+Văn phòng khoa: phòng E.107, 227 Nguyễn Văn Cừ, Q.5, TPHCM, (028) 38 356 464,www.fetel.hcmus.edu.vn
 giaovu_fetel@hcmus.edu.vn
 + Trợ lý giáo vụ Ngành Kỹ thuật ĐTVT: Đặng Thị Lan Hương, dtlhuong@hcmus.edu.vn
 + Trợ lý giáo vụ Ngành Thiết kế vi mạch: Võ Thị Thu Trúc, vtttruc@hcmus.edu.vn 
@@ -428,7 +429,7 @@ Thông tin chung
 Ban Chủ nhiệm:
 Trưởng Khoa: PGS.TS. Trần Thị Thanh Vân (tttvan@hcmus.edu.vn) 
 Phó Trưởng Khoa: PGS.TS. Hà Thúc Chí Nhân (htcnhan@hcmus.edu.vn) TS. Nguyễn Phước Trung Hòa (npthoa@hcmus.edu.vn)
-+ Văn phòng khoa: phòng F.113, 227 Nguyễn Văn Cừ, Q.5, TPHCM (028) 38 350 831, mst.hcmus@gmail.com
++ Văn phòng khoa: phòng F.113, 227 Nguyễn Văn Cừ, Q.5, TPHCM, (028) 38 350 831, mst.hcmus@gmail.com
 - Trợ lý sinh viên: Trần Thị Như Hoa ttnhoa@hcmus.edu.vn, Nguyễn Thị Vân Quỳnh ntvquynh@hcmus.edu.vn 
 - Trợ lý giáo vụ: Nguyễn Long Trọng nltrong@hcmus.edu.vn, www.mst.hcmus.edu.vn
 CƠ HỘI VIỆC LÀM: Sinh viên tốt nghiệp ngành Khoa học Vật liệu và Công nghệ vật liệu có thể làm việc tại các công ty, tập đoàn đa quốc gia về lĩnh vực vật liệu polyme, composite, vật liệu nano, vật liệu quang học, vật liệu y sinh,...với mức thu nhập cao. Ngoài ra, người học còn được tham gia các chương trình trao đổi sinh viên và được nhận bằng cử nhân Khoa học vật liệu cấp bởi các trường đại học nổi tiếng khác như Đại học Quốc gia Chungnam (Hàn Quốc), đại học Thanh Hoa (Đài Loan),...Đồng thời, có cơ hội nhận được các học bổng dành cho chương trình sau đại học ở các nước tiên tiến như Pháp, Nhật, Hàn Quốc, Đài Loan,..
