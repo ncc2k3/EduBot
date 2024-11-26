@@ -3,7 +3,7 @@ from langchain.schema import AIMessage, HumanMessage
 from chatbot.chatbot import StudentHandbookChatbot
 from chatbot.llm_handler import LLMHandler
 from chatbot.prompt_templates import get_prompt_template
-from config import *
+from config.settings import *
 
 # Khởi tạo chatbot và LLM handler
 chatbot = StudentHandbookChatbot(file_path=FILE_PATH, vectorstore_dir=VECTORSTORE_DIR)

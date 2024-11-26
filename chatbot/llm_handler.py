@@ -1,5 +1,5 @@
 from langchain_community.chat_models import ChatOllama
-from config import *
+from config.settings import *
 
 class LLMHandler:
     def __init__(self, model_name=MODEL_NAME, temperature=0.7):
