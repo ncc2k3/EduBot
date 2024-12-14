@@ -43,7 +43,7 @@ Root Dir/
 ## Authors
 
 * *21120149* -  **Nguyễn Đăng Thới Toàn**
-* *21120422*-  **Nguyễn Chí Cường**
+* *21120422* -  **Nguyễn Chí Cường**
 * *21120602* - **Võ Ngọc Trí** 
 
 
