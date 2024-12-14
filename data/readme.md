@@ -21,7 +21,7 @@ Chatbot_STSV/
 │   └── settings.py     # File cấu hình chính
 ├── data/               # Thư mục chứa dữ liệu
 │   ├── docs/           # Các tài liệu sử dụng 
-│   └── test/           # Bộ dữ liệu kiểm tra mô hình
+│   ├── test/           # Bộ dữ liệu kiểm tra mô hình
 │   └── README.md       # Mô tả về dataset
 ├── src/                # Chứa các mã nguồn sử dụng
 │   ├── base/           # Các mã nguồn dùng để khởi tạo mô hình
