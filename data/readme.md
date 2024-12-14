@@ -9,11 +9,10 @@
 * File Sổ tay sinh viên, vừa sử dụng công cụ [LlamaParse](https://cloud.llamaindex.ai/parse) sau đó chỉnh sửa thủ công.
 * Bộ Test được xây dựng thủ công một phần, phần còn lại prompt cho LLMs (ở đây là ChatGPT) để sinh ra các câu hỏi và câu trả lời; đồng thời nhóm sẽ đánh giá câu hỏi và câu trả lời nào hợp lý để quyết định cho vào bộ Test hay loại bỏ.
 
-### Mô tả dữ liệu
-
+### Tổ chức project
 
 ```plaintext
-Chatbot_STSV/
+EduBot/
 ├── README.md           # Tài liệu hướng dẫn chạy chương trình
 ├── app.py              # Tệp chính chạy ứng dụng Streamlit
 ├── requirements.txt    # Danh sách thư viện cần thiết
@@ -33,14 +32,14 @@ Chatbot_STSV/
 ### Định dạng các file dữ liệu
 
 ```plaintext
-- CTDT.md  : Chứa chương trình đào tạo đã được xử lý
-- STSV.txt : File Sổ tay sinh viên đã được xử lý
-- test.csv : Bộ test để đánh giá hiệu suất của mô hình
+- .txt  : FAQ và Sổ tay sinh viên
+- .md   : Chương trình đào tạo
+- .xlsx : Bộ test
 ```
 
 ## Liên kết đến Dataset online
 
-* [DataRepository](https://www.kaggle.com/datasets)
+* [Data Repository](https://github.com/ncc2k3/EduBot/tree/main/data)
 
 ## Authors
 
