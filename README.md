@@ -37,7 +37,7 @@ Chatbot này được tạo ra nhằm...
     git clone https://github.com/ncc2k3/Chatbot_STSV.git
     cd Chatbot_STSV
     ```
-2. Cài đặt các thư viện yêu cầu
+2. Cài đặt các thư viện cần thiết
     ```
     pip install -r requirements.txt
     ```
@@ -53,14 +53,15 @@ Chatbot này được tạo ra nhằm...
 ### **Cấu trúc dự án**
 ```plaintext
 Chatbot_STSV/
-├── README.md           # Tài liệu hướng dẫn
+├── README.md           # Tài liệu hướng dẫn chạy chương trình
 ├── app.py              # Tệp chính chạy ứng dụng Streamlit
 ├── requirements.txt    # Danh sách thư viện cần thiết
 ├── configs/            # Cấu hình ứng dụng
 │   └── settings.py     # File cấu hình chính
 ├── data/               # Thư mục chứa dữ liệu
 │   ├── docs/           # Các tài liệu sử dụng 
-│   └── test/           # Bộ dữ liệu kiểm tra mô hình
+│   ├── test/           # Bộ dữ liệu kiểm tra mô hình
+│   └── readme.md       # Mô tả về dataset
 ├── src/                # Chứa các mã nguồn sử dụng
 │   ├── base/           # Các mã nguồn dùng để khởi tạo mô hình
 │   └── rag/            # Các mã nguồn cài đặt và vận hành RAG
