@@ -12,20 +12,22 @@
 ### Mô tả dữ liệu
 
 
-```
-Give examples
-Root Dir/
-  -Sub Dir/
-    -DataFile1
-    -DataFile2
-    -...
-  -Sub Dir/
-    -Dir/
-      -DataFile1
-      -DataFile2
-      -...
-  -README.md
-
+```plaintext
+Chatbot_STSV/
+├── README.md           # Tài liệu hướng dẫn chạy chương trình
+├── app.py              # Tệp chính chạy ứng dụng Streamlit
+├── requirements.txt    # Danh sách thư viện cần thiết
+├── configs/            # Cấu hình ứng dụng
+│   └── settings.py     # File cấu hình chính
+├── data/               # Thư mục chứa dữ liệu
+│   ├── docs/           # Các tài liệu sử dụng 
+│   └── test/           # Bộ dữ liệu kiểm tra mô hình
+│   └── README.md       # Mô tả về dataset
+├── src/                # Chứa các mã nguồn sử dụng
+│   ├── base/           # Các mã nguồn dùng để khởi tạo mô hình
+│   └── rag/            # Các mã nguồn cài đặt và vận hành RAG
+│       └── chatbot.py  # Mã nguồn kiến trúc của chatbot
+└── vectorstores/       # Chứa các vector embeddings từ văn bản
 ```
 
 ### Định dạng file
