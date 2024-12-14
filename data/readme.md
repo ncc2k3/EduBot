@@ -22,7 +22,7 @@ Chatbot_STSV/
 ├── data/               # Thư mục chứa dữ liệu
 │   ├── docs/           # Các tài liệu sử dụng 
 │   ├── test/           # Bộ dữ liệu kiểm tra mô hình
-│   └── README.md       # Mô tả về dataset
+│   └── readme.md       # Mô tả về dataset
 ├── src/                # Chứa các mã nguồn sử dụng
 │   ├── base/           # Các mã nguồn dùng để khởi tạo mô hình
 │   └── rag/            # Các mã nguồn cài đặt và vận hành RAG
@@ -30,12 +30,12 @@ Chatbot_STSV/
 └── vectorstores/       # Chứa các vector embeddings từ văn bản
 ```
 
-### Định dạng file
+### Định dạng các file dữ liệu
 
-```
-- CTDT.md
-- STSV.txt
-- test.csv
+```plaintext
+- CTDT.md  : Chứa chương trình đào tạo đã được xử lý
+- STSV.txt : File Sổ tay sinh viên đã được xử lý
+- test.csv : Bộ test để đánh giá hiệu suất của mô hình
 ```
 
 ## Liên kết đến Dataset online
