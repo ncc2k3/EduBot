@@ -37,11 +37,11 @@ Chatbot này được tạo ra nhằm...
     git clone https://github.com/ncc2k3/Chatbot_STSV.git
     cd Chatbot_STSV
     ```
-2. Requirements installization
+2. Cài đặt các thư viện yêu cầu
     ```
     pip install -r requirements.txt
     ```
-3. Run app
+3. Khởi chạy ứng dụng
     ```
     streamlit run app.py
     ```
