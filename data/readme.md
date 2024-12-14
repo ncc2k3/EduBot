@@ -4,7 +4,7 @@
 
 ## Về phương pháp thu thập dữ liệu
 
-* Dữ liệu về chương trình đạo tạo được khoa đăng công khai tại [liên kết này](https://www.fit.hcmus.edu.vn/vn/Default.aspx?tabid=1284). 
+* Dữ liệu về chương trình đạo tạo được khoa đăng công khai tại [liên kết này](https://www.fit.hcmus.edu.vn/vn/Default.aspx?tabid=1284) và dữ liệu Sổ tay sinh viên được trường đăng [tại đây](https://hcmus.edu.vn/so-tay-sinh-vien-online-nam-hoc-2023-2024/)
 * Tuy nhiên, các file chương trình đào tạo là file scan được xuất ở định dạng .pdf. Nhóm đã sử dụng công cụ [LlamaCloud](https://cloud.llamaindex.ai/) để xài tính năng [LlamaParse](https://cloud.llamaindex.ai/parse) nhằm chuyển đổi file .pdf thành file text với định dạng markdown (.md). (Tính năng này đã được thiết kế để có hiệu suất tốt với RAG).
 * File Sổ tay sinh viên, vừa sử dụng công cụ [LlamaParse](https://cloud.llamaindex.ai/parse) sau đó chỉnh sửa thủ công.
 * Bộ Test được xây dựng thủ công một phần, phần còn lại prompt cho LLMs (ở đây là ChatGPT) để sinh ra các câu hỏi và câu trả lời; đồng thời nhóm sẽ đánh giá câu hỏi và câu trả lời nào hợp lý để quyết định cho vào bộ Test hay loại bỏ.
