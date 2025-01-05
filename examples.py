@@ -7,15 +7,20 @@ from langchain_community.document_loaders import TextLoader, UnstructuredMarkdow
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 from langchain_experimental.text_splitter import SemanticChunker
+from dotenv import load_dotenv
+from typing import List
+from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
+from langchain_core.prompts import PromptTemplate
+import google.generativeai as genai
+
+# Load environment variables
+load_dotenv()
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("Semantic Chunking and Retrieval")
+logger = logging.getLogger("Edubot")
 
-# Cấu hình LLM
-# LLM_MODEL = "llama3.1"
-# llm = ChatOllama(model=LLM_MODEL, temperature=0.2)
-
+""" ============== Functions ============== """
 # Hàm load file .txt và .md
 def load_documents(data_path):
     """
@@ -58,15 +63,30 @@ def create_vectorstore(documents, vectorstore_dir, embedding_model):
     vectorstore = Chroma.from_documents(documents, embedding_model, persist_directory=vectorstore_dir)
     return vectorstore
 
-# Cấu hình đường dẫn
+""" ======================================"""
+""" ============== Cấu hình ============== """
+
 BASE_DIR = os.getcwd()
 DATA_DIR = os.path.join(BASE_DIR, "data", "docs")
 VECTORSTORE_DIR = os.path.join(BASE_DIR, "vectorstores", "db_chroma_1")
-EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+EMBEDDING_MODEL = 'bkai-foundation-models/vietnamese-bi-encoder'
 
+# Khởi tạo mô hình embedding
 embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 logger.info("Mô hình embedding được khởi tạo thành công.")
 
+# Khởi tạo LLM 
+llm = ChatOllama(model="qwen2.5:7b", temperature=0.0)
+genai.configure()
+
+model = genai.GenerativeModel("gemini-1.5-flash")
+logger.info("Mô hình LLM được khởi tạo thành công.")
+
+""" ========================================"""
+""" ========================================"""
+
+""" ============== Vectorstore ============== """
 # Tạo vectorstore nếu chưa tồn tại
 if not os.path.exists(VECTORSTORE_DIR):
     logger.info("Vector store không tồn tại. Đang tạo mới...")
@@ -98,30 +118,177 @@ vectorstore = Chroma(
 # Khởi tạo retriever
 logger.info("Khởi tạo retriever...")
 retriever = vectorstore.as_retriever(
-    search_type="similarity",
-    search_kwargs={"k": 3}
+    search_type="mmr",
+    search_kwargs={"k": 5}  
 )
 
-# Truy vấn tài liệu
-query = "ĐIỀU KIỆN TỐT NGHIỆP ngành Khoa Học máy tính"
-documents = retriever.invoke(query)
+""" ==================== RAG-Fusion ==================== """
+# Question
+question = "Các chuyên ngành trong ngành công nghệ thông tin?"
+# print("Câu hỏi: ", generate_queries.invoke({"question": question}))
 
-for i, doc in enumerate(documents):
-    print(f"Kết quả {i+1}:")
-    print(doc.page_content)
-    print("\n------\n")
+from langchain.load import dumps, loads
+
+### Reranking - Reciprocal Rank Fusion
+def reciprocal_rank_fusion(results: list[list], k=100):
+    """ Reciprocal_rank_fusion that takes multiple lists of ranked documents 
+        and an optional parameter k used in the RRF formula """
+    
+    # Initialize a dictionary to hold fused scores for each unique document
+    fused_scores = {}
+
+    # Iterate through each list of ranked documents
+    for docs in results:
+        # Iterate through each document in the list, with its rank (position in the list)
+        for rank, doc in enumerate(docs):
+            # Convert the document to a string format to use as a key (assumes documents can be serialized to JSON)
+            doc_str = dumps(doc)
+            # If the document is not yet in the fused_scores dictionary, add it with an initial score of 0
+            if doc_str not in fused_scores:
+                fused_scores[doc_str] = 0
+            # Retrieve the current score of the document, if any
+            previous_score = fused_scores[doc_str]
+            # Update the score of the document using the RRF formula: 1 / (rank + k)
+            fused_scores[doc_str] += 1 / (rank + k)
+
+    # Sort the documents based on their fused scores in descending order to get the final reranked results
+    reranked_results = [
+        (loads(doc), score)
+        for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    # Return the reranked results as a list of tuples, each containing the document and its fused score
+    return reranked_results
+    
+""" ============== Query Transformation ============== """
+### Multiple queries
+# Output parser will split the LLM result into a list of queries
+from typing import List
+from langchain.retrievers.multi_query import MultiQueryRetriever
+
+# Parser
+class ListOutputParser(BaseOutputParser[List[str]]):
+    """Output parser to extract only numbered questions."""
+    def parse(self, text: str) -> List[str]:
+        lines = text.strip().split("\n")
+        return [line.strip() for line in lines if line.strip()]
+
+# Prompt
+query_generation_prompt_template = query_generation_prompt_template = query_generation_prompt_template = """
+Bạn là trợ lý AI. Nhiệm vụ của bạn là tạo ra 5 phiên bản khác nhau của câu hỏi người dùng để tối ưu hóa tìm kiếm tài liệu từ cơ sở dữ liệu.
+
+**Yêu cầu:**
+- Chỉ trả về danh sách 5 câu hỏi biến thể, mỗi câu trên một dòng.
+- Không cung cấp bất kỳ giải thích hoặc phân tích nào khác.
+- Mỗi câu hỏi phải giữ nguyên ý nghĩa gốc nhưng có cách diễn đạt khác.
+
+**Câu hỏi gốc:** {question}
+
+**Đầu ra:**
+- Danh sách gồm 5 câu hỏi biến thể, được định dạng như sau:
+1. [Câu hỏi biến thể 1]
+2. [Câu hỏi biến thể 2]
+3. [Câu hỏi biến thể 3]
+4. [Câu hỏi biến thể 4]
+5. [Câu hỏi biến thể 5]
+
+**Ví dụ 1:**
+Câu hỏi gốc: "Các chuyên ngành của ngành công nghệ thông tin?"
+
+Kết quả mong đợi:
+1. Các chuyên ngành của ngành công nghệ thông tin?
+2. Ngành công nghệ thông tin gồm những chuyên ngành nào?
+3. Những chuyên ngành nào thuộc ngành công nghệ thông tin?
+4. Ngành công nghệ thông tin có những lĩnh vực chuyên môn nào?
+5. Các lĩnh vực nào nằm trong ngành công nghệ thông tin?
+
+**Ví dụ 2:**
+Câu hỏi gốc: "Các kỹ năng mà sinh viên ngành Trí tuệ nhân tạo cần đạt được sau khi tốt nghiệp là gì?"
+
+Kết quả mong đợi:
+1. Các kỹ năng mà sinh viên ngành Trí tuệ nhân tạo cần đạt được sau khi tốt nghiệp là gì?
+2. Sinh viên ngành Trí tuệ nhân tạo cần đạt được những kỹ năng gì sau khi tốt nghiệp?
+3. Những kỹ năng quan trọng nào sinh viên ngành Trí tuệ nhân tạo cần có khi tốt nghiệp?
+4. Sau khi tốt nghiệp, sinh viên ngành Trí tuệ nhân tạo cần đạt những kỹ năng nào?
+5. Các kỹ năng thiết yếu mà sinh viên ngành Trí tuệ nhân tạo cần sau khi tốt nghiệp là gì?
+"""
+
+
+
+QUERY_PROMPT = PromptTemplate(
+    input_variables=["question"],
+    template= query_generation_prompt_template
+)
+
+output_parser = ListOutputParser()
+
+logger.info("Khởi tạo query generation chain ...")
+query_generation_chain = QUERY_PROMPT | llm | output_parser
+
+list_questions = query_generation_chain.invoke({"question": question})
+print("Câu hỏi: ", list_questions)
+
+# """ ============== Reranking  RAG-Fusion ============== """
+retrieval_chain_rag_fusion = (
+    query_generation_chain
+    | retriever.map()  # Truy vấn từng câu hỏi trong danh sách
+    | reciprocal_rank_fusion
+)
+
+docs = retrieval_chain_rag_fusion.invoke({"question": question})
+
+# print("\n---\n")
+# print("Kết quả sau khi tìm kiếm:")
+print(docs[:5])  # In ra danh sách tài liệu sau re-ranking
+print("\n---\n")
+print(f"Số lượng tài liệu tìm được: {len(docs)}")
 
 # Tạo prompt
 # Prompt trả lời câu hỏi
 # Prompt này giúp AI hiểu rằng nó cần trả lời ngắn gọn và chính xác dựa trên ngữ cảnh được cung cấp
 qa_system_prompt = (
-    "Bạn là một trợ lý thông minh hỗ trợ sinh viên trường Đại Học Khoa Học Tự Nhiên, ĐHQG-HCM trả lời câu hỏi bằng Tiếng Việt."
-    "Dựa vào các phần thông tin liên quan được cung cấp dưới đây, hãy trả lời câu hỏi một cách chính xác, ngắn gọn và chuyên nghiệp. "
-    "Nếu phần thông tin cung cấp bị thừa hoặc không liên quan, hãy bỏ qua và trả lời câu hỏi một cách chính xác."
-    "Câu trả lời cần đảm bảo ngắn gọn, chuyên nghiệp, chính xác, đúng trọng tâm và không chứa thông tin không liên quan. "
-    "Nếu không có đủ thông tin trong cơ sở dữ liệu, hãy giải thích điều này và hướng dẫn sinh viên tìm kiếm ở nguồn khác phù hợp."
-    "\n\n"
-    "Thông tin được cung cấp: {context}"
+    "Bạn là trợ lý thông minh hỗ trợ sinh viên khoa Công nghệ thông tin của Đại học Khoa học Tự nhiên, Đại học Quốc gia TP.HCM trả lời câu hỏi bằng Tiếng Việt.\n"
+    "Sử dụng thông tin từ cơ sở dữ liệu được cung cấp dưới đây để trả lời câu hỏi một cách chính xác và chuyên nghiệp.\n"
+    "Tuân thủ các quy tắc sau:\n"
+    "1. Nếu thông tin cung cấp đủ để trả lời:\n"
+    "   - Tóm tắt nội dung chính của câu hỏi.\n"
+    "   - Trả lời ngắn gọn và đầy đủ, trình bày từng ý mạch lạc.\n"
+    "2. Nếu không đủ thông tin:\n"
+    "   - Phản hồi rằng 'Tôi không đủ thông tin để trả lời câu hỏi này.'\n"
+    "   - Gợi ý nguồn thông tin hoặc tài liệu để tìm hiểu thêm.\n"
+    "3. Không bịa đặt thông tin hoặc đưa ra câu trả lời không có căn cứ.\n\n"
+    "Dưới đây là ví dụ minh họa:\n"
+    "Ví dụ 1:\n"
+    "Câu hỏi: 'Các chuyên ngành trong ngành công nghệ thông tin?'\n"
+    "Trả lời:\n"
+    "   Các chuyên ngành của ngành Công nghệ thông tin là: \n"
+    "   1. Mạng máy tính và Viễn thông\n "
+    "   2. Công nghệ thông tin.\n\n"
+    "Ví dụ 2:\n"
+    "Câu hỏi: 'PGS.TS Lê Hoài Bắc giảng dạy những môn học nào?'\n"
+    "Trả lời:\n"
+    "   Không có thông tin về giảng viên này. Bạn có thể tìm hiểu thêm tại: https://www.fit.hcmus.edu.vn/\n\n"
+    "Ví dụ 3:\n"
+    "Câu hỏi: 'Các học phần liên quan đến môn Toán trong chương trình đào tạo?'\n"
+    "Trả lời:\n"
+    "   Dưới đây là các học phần liên quan đến môn Toán trong chương trình đào tạo:\n"
+    "   - MTH00003 - Vi tích phân 1B\n"
+    "   - MTH00081 - Thực hành Vi tích phân 1B\n"
+    "   - MTH00004 - Vi tích phân 2B\n"
+    "   - MTH00082 - Thực hành Vi tích phân 2B\n"
+    "   - MTH00030 - Đại số tuyến tính\n"
+    "   - MTH00083 - Thực hành Đại số tuyến tính\n"
+    "   - MTH00040 - Xác suất thống kê \n"
+    "   - MTH00085 - Thực hành Xác suất thống kê\n"
+    "   - MTH00041 - Toán rời rạc\n"
+    "   - MTH00086 - Thực hành Toán rời rạc\n"
+    "   - MTH00050 - Toán học tổ hợp\n"
+    "   - MTH00051 - Toán ứng dụng và thống kê (tự chọn)\n"
+    "   - MTH00052 - Phương pháp tính (tự chọn)\n"
+    "   - MTH00053 - Lý thuyết số (tự chọn)\n\n"
+    "Thông tin được cung cấp: {context}\n\n"
+    "Câu hỏi: {question}\n\n"
+    "Trả lời:"
 )
 
 
@@ -129,19 +296,33 @@ qa_system_prompt = (
 qa_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", qa_system_prompt),
-        ("human", "{query}"),
+        ("human", "{question}"),
     ]
 )
 
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.output_parsers import StrOutputParser
+
+
+model_gemini = ChatGoogleGenerativeAI(
+    model="gemini-1.5-pro",
+    temperature=0,
+    max_tokens=None,
+    timeout=None,
+    max_retries=2,
+    # other params...
+)
+
+from operator import itemgetter
 # Sử dụng LLM để sinh câu trả lời
-logger.info("Đang tạo mô hình LLM...")
-llm = ChatOllama(model="llama3.1", temperature=0.2)
-logger.info("Mô hình LLM được khởi tạo thành công.")
+logger.info("Khởi tạo final rag chain ...")
+final_rag_chain = (
+    {"context": retrieval_chain_rag_fusion, 
+    "question": itemgetter("question"),} 
+    | qa_prompt
+    | model_gemini
+    | StrOutputParser()
+)
 
 logger.info("Đang tạo trả lời ...")
-retrieved_context = "\n\n".join([doc.page_content for doc in documents])
-formatted_prompt = qa_prompt.invoke({"context": retrieved_context, "query": query})
-response = llm.invoke(formatted_prompt)
-
-print("\nCâu trả lời từ AI:")
-print(response)
+print(final_rag_chain.invoke({"question":question}))

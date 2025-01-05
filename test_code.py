@@ -146,10 +146,62 @@ retriever = vectorstore.as_retriever(
 query = "Các chuyên ngành trong ngành công nghệ thông tin"
 document = retriever.invoke(query)
 
-for i, doc in enumerate(document):
-    print(f"Kết quả {i+1}:")
-    print(doc.page_content)
-    print("\n------\n")
-    
+# for i, doc in enumerate(document):
+#     print(f"Kết quả {i+1}:")
+#     print(doc.page_content)
+#     print("\n------\n")
+
+# ### Reranking CoHere
+# # import cohere
+
+# # co = cohere.ClientV2()
+
+# # # Retrieve documents for each query
+# # retrieved_docs = []
+# # for query in list_questions:
+# #     retrieved_docs.append(retriever.retrieve(query))
+
+# # # Use co.rerank to rank the retrieved documents
+# # response = co.rerank(
+# #     model="rerank-v3.5",
+# #     query=question,
+# #     documents=[doc.page_content for docs in retrieved_docs for doc in docs],
+# #     top_n=60,
+# # )
+
+# # # Convert the response back to Document objects
+# # ranked_docs = [Document(page_content=doc['document']) for doc in response]
+
+# # # Use reciprocal_rank_fusion to re-rank the documents
+# # final_docs = reciprocal_rank_fusion([ranked_docs])
+# # print("\n---\n")
+# # print("Kết quả sau khi rerank:", len(response))
+
+# # # Chain
+# # llm_chain = QUERY_PROMPT | llm | output_parser
+
+# # # Other inputs
+# # question = "Các chuyên ngành của ngành Khoa học máy tính"
+
+# # # Run
+# # logger.info("Generating multiple queries...")
+# # retriever = MultiQueryRetriever(
+# #     retriever=vectorstore.as_retriever(), llm_chain=llm_chain, parser_key="lines"
+# # )  # "lines" is the key (attribute name) of the parsed output
+
+# # # Results
+# # logger.info("Retrieving documents...")
+# # unique_docs = retriever.invoke(question)
+# # # print(unique_docs[0])
+# # print("\n---\n")
+# # print(len(unique_docs))
 
 
+# # # Truy vấn tài liệu
+# # query = "ĐIỀU KIỆN TỐT NGHIỆP ngành Khoa Học máy tính"
+# # documents = retriever.invoke(query)
+
+# # for i, doc in enumerate(documents):
+# #     print("Kết quả {}: ".format(i+1))
+# #     print(doc.page_content)
+# #     print("\n--------\n")

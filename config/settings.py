@@ -9,7 +9,7 @@ EMBEDDING_MODEL = "bkai-foundation-models/vietnamese-bi-encoder"
 """
 
 # Tên model ngôn ngữ lớn
-LLM_MODEL = "llama3.1"
+LLM_MODEL = "qwen2.5:7b"
 
 # Cấu hình đường dẫn
 BASE_DIR = os.getcwd()
