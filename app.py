@@ -1,74 +1,110 @@
-import streamlit as st
-from langchain.schema import AIMessage, HumanMessage
-from chatbot.chatbot import StudentHandbookChatbot
-from chatbot.llm_handler import LLMHandler
-from chatbot.prompt_templates import get_prompt_template
-from config.settings import *
+# import streamlit as st
+from chatbot.tools import create_chroma_retriever
+from langchain_ollama import ChatOllama
+from config.settings import LLM_MODEL
+import logging
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from config.settings import EMBEDDING_MODEL
+from chatbot.agent import create_agent_chains
+import os
+from dotenv import load_dotenv
 
-# Khởi tạo chatbot và LLM handler
-chatbot = StudentHandbookChatbot(file_path=FILE_PATH, vectorstore_dir=VECTORSTORE_DIR)
-llm_handler = LLMHandler()
-prompt_template = get_prompt_template()
+# Load environment variables
+load_dotenv()
 
-# Load hoặc tạo vector store
-chatbot.create_or_load_vectorstore()
+# Cấu hình logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("App")
 
-# Thiết lập giao diện Streamlit
-st.set_page_config(page_title="Chatbot - Hỗ Trợ Sinh Viên IT", layout="wide")
-st.title("💬 Chatbot Hỏi Đáp - Hỗ Trợ Sinh Viên IT")
+# Khởi tạo ứng dụng Streamlit
+# st.set_page_config(page_title="Chatbot Hỗ Trợ Sinh Viên", layout="wide")
+# st.title("💬 EduBot ")
 
-# Khởi tạo session state cho lịch sử hội thoại và trạng thái xử lý
-if "chat_history" not in st.session_state:
-    st.session_state["chat_history"] = []
+# Lịch sử hội thoại
+# if "chat_history" not in st.session_state:
+#     st.session_state["chat_history"] = []
 
-if "waiting_for_response" not in st.session_state:
-    st.session_state["waiting_for_response"] = False
+# Khởi tạo mô hình LLM
+try:
+    llm = ChatOllama(model=LLM_MODEL, temperature=0.7, language="vi")
+    logger.info("Mô hình LLM được khởi tạo thành công.")
+except Exception as e:
+    logger.error(f"Lỗi khi khởi tạo mô hình LLM: {e}")
+    # st.error("Không thể khởi tạo mô hình. Vui lòng kiểm tra lại cấu hình.")
+    # st.stop()
 
-# Hiển thị hội thoại
-for msg in st.session_state["chat_history"]:
-    if isinstance(msg, HumanMessage):
-        st.chat_message("👤").write(msg.content)
-    elif isinstance(msg, AIMessage):
-        st.chat_message("🤖").write(msg.content)
+# Khởi tạo embedding model
+try:
+    embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+    logger.info("Mô hình embedding được khởi tạo thành công.")
+except Exception as e:
+    logger.error(f"Lỗi khi khởi tạo embedding model: {e}")
+    # st.error("Không thể khởi tạo embedding model. Vui lòng kiểm tra lại cấu hình.")
+    # st.stop()
+    
+# Khởi tạo retriever
+try:
+    retriever = create_chroma_retriever(embedding_model)
+    logger.info("Retriever được khởi tạo thành công.")
+except Exception as e:
+    logger.error(f"Lỗi khi khởi tạo retriever: {e}")
+    # st.error("Không thể khởi tạo retriever. Vui lòng kiểm tra lại vectorstore.")
+    # st.stop()
 
-# Nhập câu hỏi của người dùng
-if not st.session_state.waiting_for_response:
-    prompt = st.chat_input(placeholder="Nhập câu hỏi của bạn tại đây...")
-    if prompt:
-        # Thêm câu hỏi vào lịch sử
-        user_message = HumanMessage(content=prompt)
-        st.session_state["chat_history"].append(user_message)
-        st.chat_message("👤").write(prompt)
 
-        # Ngăn người dùng nhập tiếp trong khi đang xử lý
-        st.session_state.waiting_for_response = True
+# Khởi tạo agent
+try:
+    agent_executor = create_agent_chains(llm, retriever)
+    logger.info("Agent được khởi tạo thành công.")
+except Exception as e:
+    logger.error(f"Lỗi khi khởi tạo agent: {e}")
+    # st.error("Không thể khởi tạo agent. Vui lòng kiểm tra lại cấu hình.")
+    # st.stop()
+    
+chat_history = []
 
-        # Xử lý câu hỏi
-        with st.spinner("Đang xử lý câu trả lời..."):
-            documents = chatbot.query_documents(prompt)
+# query = "Các chuyên ngành trong ngành công nghệ thông tin"
+query = "Các môn đại cương trong ngành công nghệ thông tin"
+document = retriever.invoke(query)
 
-            if not documents:
-                answer = "❌ Không tìm thấy tài liệu phù hợp. Vui lòng thử lại với câu hỏi khác."
-            else:
-                # Tạo ngữ cảnh từ tài liệu
-                context = chatbot.combine_context(documents)
+for doc in document:
+    print("\n\n ----- \n\n")
+    print(doc.page_content)
 
-                # Sinh câu trả lời từ template
-                chat_history_text = "\n".join(
-                    f"{'Người dùng' if isinstance(msg, HumanMessage) else 'Trợ lý'}: {msg.content}"
-                    for msg in st.session_state["chat_history"]
-                )
-                answer = llm_handler.generate_answer(
-                    context=context,
-                    question=prompt,
-                    chat_history=chat_history_text,
-                    prompt_template=prompt_template,
-                )
+# # Gửi câu hỏi đến agent và lấy kết quả
+# response = agent_executor.invoke({"input": query, "chat_history": chat_history})
+# print("AI:", response['output'])
 
-            # Thêm câu trả lời vào lịch sử
-            ai_message = AIMessage(content=answer)
-            st.session_state["chat_history"].append(ai_message)
-            st.chat_message("🤖").write(answer)
+# Giao diện nhập câu hỏi
+# Hiển thị lịch sử hội thoại
+# st.subheader("Lịch sử hội thoại")
+# chat_placeholder = st.container()
+# with chat_placeholder:
+#     for chat in st.session_state["chat_history"]:
+#         if chat["role"] == "human":
+#             st.markdown(f"👤 **Bạn:** {chat['content']}")
+#         elif chat["role"] == "assistant":
+#             st.markdown(f"🤖 **Chatbot:** {chat['content']}")
 
-        # Cho phép người dùng nhập câu hỏi mới
-        st.session_state.waiting_for_response = False
+# # Ô nhập câu hỏi ở bên dưới
+# st.subheader("Nhập câu hỏi của bạn")
+# query = st.text_input("", placeholder="Hãy nhập câu hỏi của bạn...")
+# if query:
+#     try:
+#         # Gửi câu hỏi đến agent và lấy kết quả
+#         response = agent_executor.invoke({"input": query, "chat_history": st.session_state["chat_history"]})
+#         st.session_state["chat_history"].append({"role": "human", "content": query})
+#         st.session_state["chat_history"].append({"role": "assistant", "content": response["output"]})
+
+#         # Làm mới giao diện lịch sử hội thoại
+#         chat_placeholder.empty()
+#         with chat_placeholder:
+#             for chat in st.session_state["chat_history"]:
+#                 if chat["role"] == "human":
+#                     st.markdown(f"👤 **Bạn:** {chat['content']}")
+#                 elif chat["role"] == "assistant":
+#                     st.markdown(f"🤖 **Chatbot:** {chat['content']}")
+
+#     except Exception as e:
+#         logger.error(f"Lỗi khi xử lý câu hỏi: {e}")
+#         st.error("Lỗi trong quá trình xử lý câu hỏi. Vui lòng thử lại sau.")
