@@ -1,110 +1,451 @@
-# import streamlit as st
-from chatbot.tools import create_chroma_retriever
-from langchain_ollama import ChatOllama
-from config.settings import LLM_MODEL
-import logging
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from config.settings import EMBEDDING_MODEL
-from chatbot.agent import create_agent_chains
 import os
+import logging
+from langchain.prompts import ChatPromptTemplate
+from langchain_ollama import ChatOllama
+from langchain_chroma import Chroma
+from langchain_community.document_loaders import TextLoader, UnstructuredMarkdownLoader
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.schema import Document
+from langchain_experimental.text_splitter import SemanticChunker
 from dotenv import load_dotenv
+from typing import List
+from langchain_core.output_parsers import BaseOutputParser, StrOutputParser
+from langchain_core.prompts import PromptTemplate, MessagesPlaceholder
+import google.generativeai as genai
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.output_parsers import StrOutputParser
+from operator import itemgetter
+import streamlit as st
+
 
 # Load environment variables
 load_dotenv()
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("App")
+logger = logging.getLogger("Edubot")
 
-# Khởi tạo ứng dụng Streamlit
-# st.set_page_config(page_title="Chatbot Hỗ Trợ Sinh Viên", layout="wide")
-# st.title("💬 EduBot ")
+# ====================================== #
+# ============== Cấu hình ============== #
 
-# Lịch sử hội thoại
-# if "chat_history" not in st.session_state:
-#     st.session_state["chat_history"] = []
+BASE_DIR = os.getcwd()
+DATA_DIR = os.path.join(BASE_DIR, "data", "docs")
+VECTORSTORE_DIR = os.path.join(BASE_DIR, "vectorstores", "db_chroma_1")
+# EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+EMBEDDING_MODEL = 'bkai-foundation-models/vietnamese-bi-encoder'
 
-# Khởi tạo mô hình LLM
-try:
-    llm = ChatOllama(model=LLM_MODEL, temperature=0.7, language="vi")
-    logger.info("Mô hình LLM được khởi tạo thành công.")
-except Exception as e:
-    logger.error(f"Lỗi khi khởi tạo mô hình LLM: {e}")
-    # st.error("Không thể khởi tạo mô hình. Vui lòng kiểm tra lại cấu hình.")
-    # st.stop()
+# Khởi tạo mô hình embedding
+embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+logger.info("Mô hình embedding được khởi tạo thành công.")
 
-# Khởi tạo embedding model
-try:
-    embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
-    logger.info("Mô hình embedding được khởi tạo thành công.")
-except Exception as e:
-    logger.error(f"Lỗi khi khởi tạo embedding model: {e}")
-    # st.error("Không thể khởi tạo embedding model. Vui lòng kiểm tra lại cấu hình.")
-    # st.stop()
+# ======================================== #
+# ======================================== #
+
+# ============== Functions =============== #
+# Hàm load file .txt và .md
+def load_documents(data_path):
+    # Tải tài liệu từ thư mục dữ liệu. 
+    documents = []
+    for file_name in os.listdir(data_path):
+        file_path = os.path.join(data_path, file_name)
+        if file_name.endswith(".txt"):
+            loader = TextLoader(file_path, encoding="utf-8")
+        elif file_name.endswith(".md"):
+            loader = TextLoader(file_path, encoding="utf-8") # Ban đầu dùng UnstructuredMarkdownLoader nhưng nó bị mất ksi hiệu bảng
+        else:
+            continue
+        documents.extend(loader.load())
+    return documents
+
+# Chunking dữ liệu bằng SemanticChunker
+def chunk_documents(documents, embedding_model):
+    # Sử dụng Semantic Chunker để chia nhỏ tài liệu dựa trên ngữ nghĩa.
+    semantic_chunker = SemanticChunker(embedding_model, breakpoint_threshold_type="percentile")
+    chunks = []
+    for doc in documents:
+        split_texts = semantic_chunker.create_documents([doc.page_content])
+        for chunk in split_texts:
+            chunks.append(Document(page_content=chunk.page_content, metadata=doc.metadata))
+        
+    return chunks
+
+# Tạo vectorstore
+def create_vectorstore(documents, vectorstore_dir, embedding_model):
+    # Tạo vector store để lưu trữ các đoạn văn bản đã embedding.
+    if not os.path.exists(vectorstore_dir):
+        os.makedirs(vectorstore_dir)
+    logger.info("Đang tạo vector store...")
+    vectorstore = Chroma.from_documents(documents, embedding_model, persist_directory=vectorstore_dir)
+    return vectorstore
+
+# ============== Vectorstore ============== #
+# Tạo vectorstore nếu chưa tồn tại
+if not os.path.exists(VECTORSTORE_DIR):
+    logger.info("Vector store không tồn tại. Đang tạo mới...")
     
+    # Load documents
+    logger.info("Đang tải tài liệu...")
+    documents = load_documents(DATA_DIR)
+    logger.info(f"Số lượng tài liệu: {len(documents)}")
+    
+    # Chunk documents
+    logger.info("Đang chia nhỏ tài liệu...")
+    chunked_documents = chunk_documents(documents, embedding_model)
+    logger.info(f"Số lượng tài liệu sau khi chia nhỏ: {len(chunked_documents)}")
+    
+    # Create vectorstore
+    logger.info("Đang tạo vector store...")
+    vectorstore = create_vectorstore(chunked_documents, VECTORSTORE_DIR, embedding_model)
+    logger.info("Vector store đã được tạo và lưu thành công.")
+else:
+    logger.info("Vector store đã tồn tại.")
+
+# Load vectorstore
+logger.info("Đang load vector store...")
+vectorstore = Chroma(
+    persist_directory=VECTORSTORE_DIR,
+    embedding_function=embedding_model
+)
+
 # Khởi tạo retriever
-try:
-    retriever = create_chroma_retriever(embedding_model)
-    logger.info("Retriever được khởi tạo thành công.")
-except Exception as e:
-    logger.error(f"Lỗi khi khởi tạo retriever: {e}")
-    # st.error("Không thể khởi tạo retriever. Vui lòng kiểm tra lại vectorstore.")
-    # st.stop()
+logger.info("Khởi tạo retriever...")
+retriever = vectorstore.as_retriever(
+    search_type="mmr",
+    search_kwargs={"k": 5}  
+)
 
+# ==================== RAG-Fusion ==================== #
+from langchain.load import dumps, loads
 
-# Khởi tạo agent
-try:
-    agent_executor = create_agent_chains(llm, retriever)
-    logger.info("Agent được khởi tạo thành công.")
-except Exception as e:
-    logger.error(f"Lỗi khi khởi tạo agent: {e}")
-    # st.error("Không thể khởi tạo agent. Vui lòng kiểm tra lại cấu hình.")
-    # st.stop()
+### Reranking - Reciprocal Rank Fusion
+def reciprocal_rank_fusion(results: list[list], k=100):
+    # Reciprocal_rank_fusion that takes multiple lists of ranked documents 
+    #    and an optional parameter k used in the RRF formula 
     
-chat_history = []
+    # Initialize a dictionary to hold fused scores for each unique document
+    fused_scores = {}
 
-# query = "Các chuyên ngành trong ngành công nghệ thông tin"
-query = "Các môn đại cương trong ngành công nghệ thông tin"
-document = retriever.invoke(query)
+    # Iterate through each list of ranked documents
+    for docs in results:
+        # Iterate through each document in the list, with its rank (position in the list)
+        for rank, doc in enumerate(docs):
+            # Convert the document to a string format to use as a key (assumes documents can be serialized to JSON)
+            doc_str = dumps(doc)
+            # If the document is not yet in the fused_scores dictionary, add it with an initial score of 0
+            if doc_str not in fused_scores:
+                fused_scores[doc_str] = 0
+            # Retrieve the current score of the document, if any
+            previous_score = fused_scores[doc_str]
+            # Update the score of the document using the RRF formula: 1 / (rank + k)
+            fused_scores[doc_str] += 1 / (rank + k)
 
-for doc in document:
-    print("\n\n ----- \n\n")
-    print(doc.page_content)
+    # Sort the documents based on their fused scores in descending order to get the final reranked results
+    reranked_results = [
+        (loads(doc), score)
+        for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
+    ]
 
-# # Gửi câu hỏi đến agent và lấy kết quả
-# response = agent_executor.invoke({"input": query, "chat_history": chat_history})
-# print("AI:", response['output'])
+    # Return the reranked results as a list of tuples, each containing the document and its fused score
+    return reranked_results
+    
+# ============== Query Transformation ============== #
 
-# Giao diện nhập câu hỏi
-# Hiển thị lịch sử hội thoại
-# st.subheader("Lịch sử hội thoại")
-# chat_placeholder = st.container()
-# with chat_placeholder:
-#     for chat in st.session_state["chat_history"]:
-#         if chat["role"] == "human":
-#             st.markdown(f"👤 **Bạn:** {chat['content']}")
-#         elif chat["role"] == "assistant":
-#             st.markdown(f"🤖 **Chatbot:** {chat['content']}")
+# Dùng để hiểu ngữ cảnh viết lại câu hỏi
+contextualize_q_system_prompt = """
+    Bạn là một trợ lý AI thông minh, có khả năng hiểu ngữ cảnh từ lịch sử hội thoại để diễn đạt lại câu hỏi của người dùng thành một câu hỏi độc lập, dễ hiểu mà không cần tham chiếu đến lịch sử hội thoại. Hãy làm điều này theo cách rõ ràng, logic và ngắn gọn.
 
-# # Ô nhập câu hỏi ở bên dưới
-# st.subheader("Nhập câu hỏi của bạn")
-# query = st.text_input("", placeholder="Hãy nhập câu hỏi của bạn...")
-# if query:
-#     try:
-#         # Gửi câu hỏi đến agent và lấy kết quả
-#         response = agent_executor.invoke({"input": query, "chat_history": st.session_state["chat_history"]})
-#         st.session_state["chat_history"].append({"role": "human", "content": query})
-#         st.session_state["chat_history"].append({"role": "assistant", "content": response["output"]})
+    **Hướng dẫn:**
+    1. Đọc kỹ lịch sử hội thoại đã cung cấp.
+    2. Xác định các tham chiếu bối cảnh trong câu hỏi của người dùng.
+    3. Nếu câu hỏi chứa các tham chiếu không rõ ràng, diễn đạt lại câu hỏi thành một câu độc lập với đầy đủ thông tin ngữ cảnh từ lịch sử hội thoại.
+    4. Nếu câu hỏi đã độc lập và rõ ràng, giữ nguyên.
 
-#         # Làm mới giao diện lịch sử hội thoại
-#         chat_placeholder.empty()
-#         with chat_placeholder:
-#             for chat in st.session_state["chat_history"]:
-#                 if chat["role"] == "human":
-#                     st.markdown(f"👤 **Bạn:** {chat['content']}")
-#                 elif chat["role"] == "assistant":
-#                     st.markdown(f"🤖 **Chatbot:** {chat['content']}")
+    **Chuỗi tư duy (Chain of Thought - CoT):**
+    - Xác định nội dung liên quan trong lịch sử hội thoại.
+    - Kiểm tra xem câu hỏi của người dùng có thể hiểu được mà không cần bối cảnh hay không.
+    - Nếu không, sử dụng thông tin từ lịch sử hội thoại để làm rõ câu hỏi.
+    - Trả lời bằng câu hỏi đã được diễn đạt lại.
 
-#     except Exception as e:
-#         logger.error(f"Lỗi khi xử lý câu hỏi: {e}")
-#         st.error("Lỗi trong quá trình xử lý câu hỏi. Vui lòng thử lại sau.")
+    **Đầu vào:**
+    Lịch sử hội thoại: {chat_history}
+    Câu hỏi gốc: {input}
+
+    **Đầu ra:**
+    Câu hỏi đã được diễn đạt lại: 
+
+    **Ví dụ 1:**
+    Lịch sử hội thoại:
+    [
+        {{"role": "user", "content": "Các chuyên ngành trong ngành công nghệ thông tin là gì?"}},
+        {{"role": "assistant", "content": "Các chuyên ngành bao gồm: \n1. Mạng máy tính và Viễn thông\n2. Công nghệ phần mềm."}}
+    ]
+    Câu hỏi gốc: "Cần bao nhiêu tín chỉ để tốt nghiệp?"
+    Chuỗi tư duy: 
+    - Câu hỏi "Cần bao nhiêu tín chỉ để tốt nghiệp?" không rõ ngành học cụ thể.
+    - Lấy thông tin về "Công nghệ thông tin" từ lịch sử hội thoại để làm rõ.
+    Câu hỏi đã được diễn đạt lại: "Ngành Công nghệ thông tin cần bao nhiêu tín chỉ để tốt nghiệp?"
+
+    **Ví dụ 2:**
+    Lịch sử hội thoại:
+    [
+        {{"role": "user", "content": "Các chuyên ngành trong ngành công nghệ thông tin là gì?"}},
+        {{"role": "assistant", "content": "Các chuyên ngành bao gồm: \n1. Mạng máy tính và Viễn thông\n2. Công nghệ phần mềm."}}
+    ]
+    Câu hỏi gốc: "Sinh viên năm 1, học kì 2 ngành Công nghệ thông tin cần học những môn gì?"
+    Chuỗi tư duy: 
+    - Câu hỏi đã rõ ràng và đầy đủ thông tin.
+    - Không cần chỉnh sửa thêm.
+    Câu hỏi đã được diễn đạt lại: "Sinh viên năm 1, học kì 2 ngành Công nghệ thông tin cần học những môn gì?"
+
+    Lưu ý: Đảm bảo câu trả lời luôn bằng Tiếng Việt. Kết quả trả về chỉ hiện thị câu hỏi, không hiển thị gì thêm.
+"""
+
+logger.info("Cấu hình contextualize_q_prompt")
+contextualize_q_prompt = PromptTemplate(
+    input_variables=["chat_history", "input"],
+    template=contextualize_q_system_prompt
+)
+
+
+# Dùng để sinh ra nhiều câu hỏi từ câu hỏi gốc
+from typing import List
+from langchain.retrievers.multi_query import MultiQueryRetriever
+
+# Parser
+class ListOutputParser(BaseOutputParser[List[str]]):
+    # Output parser to extract only numbered questions. # 
+    def parse(self, text: str) -> List[str]:
+        lines = text.strip().split("\n")
+        return [line.strip() for line in lines if line.strip()]
+
+# Prompt
+query_generation_prompt_template = """
+Bạn là trợ lý AI. Nhiệm vụ của bạn là tạo ra 5 phiên bản khác nhau của câu hỏi người dùng để tối ưu hóa tìm kiếm tài liệu từ cơ sở dữ liệu.
+
+**Yêu cầu:**
+- Chỉ trả về danh sách 5 câu hỏi biến thể, mỗi câu trên một dòng.
+- Không cung cấp bất kỳ giải thích hoặc phân tích nào khác.
+- Mỗi câu hỏi phải giữ nguyên ý nghĩa gốc nhưng có cách diễn đạt khác.
+
+**Câu hỏi gốc:** {question}
+
+**Đầu ra:**
+- Danh sách gồm 5 câu hỏi biến thể, được định dạng như sau:
+1. [Câu hỏi biến thể 1]
+2. [Câu hỏi biến thể 2]
+3. [Câu hỏi biến thể 3]
+4. [Câu hỏi biến thể 4]
+5. [Câu hỏi biến thể 5]
+
+**Ví dụ 1:**
+Câu hỏi gốc: "Các chuyên ngành của ngành công nghệ thông tin?"
+
+Kết quả mong đợi:
+1. Các chuyên ngành của ngành công nghệ thông tin?
+2. Ngành công nghệ thông tin gồm những chuyên ngành nào?
+3. Những chuyên ngành nào thuộc ngành công nghệ thông tin?
+4. Ngành công nghệ thông tin có những lĩnh vực chuyên môn nào?
+5. Các lĩnh vực nào nằm trong ngành công nghệ thông tin?
+
+**Ví dụ 2:**
+Câu hỏi gốc: "Các kỹ năng mà sinh viên ngành Trí tuệ nhân tạo cần đạt được sau khi tốt nghiệp là gì?"
+
+Kết quả mong đợi:
+1. Các kỹ năng mà sinh viên ngành Trí tuệ nhân tạo cần đạt được sau khi tốt nghiệp là gì?
+2. Sinh viên ngành Trí tuệ nhân tạo cần đạt được những kỹ năng gì sau khi tốt nghiệp?
+3. Những kỹ năng quan trọng nào sinh viên ngành Trí tuệ nhân tạo cần có khi tốt nghiệp?
+4. Sau khi tốt nghiệp, sinh viên ngành Trí tuệ nhân tạo cần đạt những kỹ năng nào?
+5. Các kỹ năng thiết yếu mà sinh viên ngành Trí tuệ nhân tạo cần sau khi tốt nghiệp là gì?
+"""
+
+QUERY_PROMPT = PromptTemplate(
+    input_variables=["question"],
+    template= query_generation_prompt_template
+)
+
+output_parser = ListOutputParser()
+
+# """ ============== Prompting template System ============== """
+# Tạo prompt
+# Prompt trả lời câu hỏi
+# Prompt này giúp AI hiểu rằng nó cần trả lời ngắn gọn và chính xác dựa trên ngữ cảnh được cung cấp
+qa_system_prompt = (
+    "Bạn là trợ lý thông minh hỗ trợ sinh viên khoa Công nghệ thông tin của Đại học Khoa học Tự nhiên, Đại học Quốc gia TP.HCM trả lời câu hỏi bằng Tiếng Việt.\n"
+    "Sử dụng thông tin từ cơ sở dữ liệu được cung cấp dưới đây để trả lời câu hỏi một cách chính xác và chuyên nghiệp.\n"
+    "Tuân thủ các quy tắc sau:\n"
+    "1. Nếu thông tin cung cấp đủ để trả lời:\n"
+    "   - Tóm tắt nội dung chính của câu hỏi.\n"
+    "   - Trả lời ngắn gọn và đầy đủ, trình bày từng ý mạch lạc.\n"
+    "2. Nếu không đủ thông tin:\n"
+    "   - Phản hồi rằng 'Tôi không đủ thông tin để trả lời câu hỏi này.'\n"
+    "   - Gợi ý nguồn thông tin hoặc tài liệu để tìm hiểu thêm.\n"
+    "3. Không bịa đặt thông tin hoặc đưa ra câu trả lời không có căn cứ.\n\n"
+    "Dưới đây là ví dụ minh họa:\n"
+    "Ví dụ 1:\n"
+    "Câu hỏi: 'Các chuyên ngành trong ngành công nghệ thông tin?'\n"
+    "Trả lời:\n"
+    "   Các chuyên ngành của ngành Công nghệ thông tin là: \n"
+    "   1. Mạng máy tính và Viễn thông\n "
+    "   2. Công nghệ thông tin.\n\n"
+    "Ví dụ 2:\n"
+    "Câu hỏi: 'PGS.TS Lê Hoài Bắc giảng dạy những môn học nào?'\n"
+    "Trả lời:\n"
+    "   Không có thông tin về giảng viên này. Bạn có thể tìm hiểu thêm tại: https://www.fit.hcmus.edu.vn/\n\n"
+    "Ví dụ 3:\n"
+    "Câu hỏi: 'Các học phần liên quan đến môn Toán trong chương trình đào tạo?'\n"
+    "Trả lời:\n"
+    "   Dưới đây là các học phần liên quan đến môn Toán trong chương trình đào tạo:\n"
+    "   - MTH00003 - Vi tích phân 1B\n"
+    "   - MTH00081 - Thực hành Vi tích phân 1B\n"
+    "   - MTH00004 - Vi tích phân 2B\n"
+    "   - MTH00082 - Thực hành Vi tích phân 2B\n"
+    "   - MTH00030 - Đại số tuyến tính\n"
+    "   - MTH00083 - Thực hành Đại số tuyến tính\n"
+    "   - MTH00040 - Xác suất thống kê \n"
+    "   - MTH00085 - Thực hành Xác suất thống kê\n"
+    "   - MTH00041 - Toán rời rạc\n"
+    "   - MTH00086 - Thực hành Toán rời rạc\n"
+    "   - MTH00050 - Toán học tổ hợp\n"
+    "   - MTH00051 - Toán ứng dụng và thống kê (tự chọn)\n"
+    "   - MTH00052 - Phương pháp tính (tự chọn)\n"
+    "   - MTH00053 - Lý thuyết số (tự chọn)\n\n"
+    "Thông tin được cung cấp: {context}\n\n"
+    "Câu hỏi: {question}\n\n"
+    "Trả lời:"
+)
+
+# Tạo template prompt cho việc trả lời câu hỏi
+qa_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", qa_system_prompt),
+        ("user", "{question}"),
+    ]
+)
+
+# Hàm main
+if __name__ == "__main__":
+    
+    # Cấu hình giao diện Streamlit
+    icon_url = "https://cdn-icons-png.flaticon.com/512/6540/6540769.png"
+    st.set_page_config(page_title="Edubot", page_icon=icon_url)
+    
+    # Sidebar
+    with st.sidebar:
+        # Tạo tiêu đề với hình ảnh icon
+        st.markdown(
+            f"""
+            <div style="display: flex; align-items: center;">
+                <img src="{icon_url}" width="80" height="80" style="margin-right: 10px;">
+                <h1 style="margin: 0 20; font-size: 2rem; line-height: 60px;">Edubot</h1>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        st.subheader('Models and parameters')
+        selected_model = st.sidebar.selectbox('Choose a LLMs model', ["LLama3.1", "Gemini-pro-1.5"], key='selected_model')
+            
+        st.markdown("Tùy chỉnh tham số:")
+        temperature = st.slider("Temperature", min_value=0.01, max_value=2.0, value=0.7, step=0.01)
+        top_p = st.slider("Top P", min_value=0.01, max_value=1.0, value=0.9, step=0.01)
+        max_length = st.slider("Max Length", min_value=64, max_value=1024, value=512, step=8)
+        
+        # Khởi tạo mô hình dựa trên lựa chọn
+        if selected_model == 'LLama3.1':
+            llm = ChatOllama(model="Llama3.1", temperature=temperature, top_p=top_p, max_length=max_length)
+            logger.info("Khởi tạo mô hình Llama3.1 thành công.")
+        else:
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-1.5-pro",
+                temperature=temperature,
+                top_p=top_p,
+                max_length=max_length
+            )
+            logger.info("Khởi tạo mô hình Gemini-pro-1.5 thành công.")
+            
+            
+    # Khởi tạo lịch sử hội thoại
+    if "messages" not in st.session_state:
+        st.session_state.messages = [{"role": "assistant", "content": "Chào bạn! Tôi có thể giúp gì hôm nay?"}]
+
+    # Display or clear chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+    def clear_chat_history():
+        st.session_state.messages = [{"role": "assistant", "content": "Chào bạn! Tôi có thể giúp gì hôm nay?"}]
+        logger.info("Đã xóa lịch sử hội thoại.")
+    st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
+
+    ### === Hàm phục vụ cho streamlit generate === ###
+    # Hàm refine query dựa trên lịch sử hội thoại
+    def refine_query(user_input, chat_history):
+        """
+        Refine câu hỏi của người dùng dựa trên lịch sử hội thoại, sử dụng prompt mới với phương pháp Chain of Thought (CoT).
+        """
+        try:
+            logger.info(f"Refine query: {user_input}")
+            
+            # Thực hiện refine câu hỏi
+            refined_query_chain = (
+                contextualize_q_prompt
+                | llm  # Sử dụng Large Language Model để sinh output
+                | StrOutputParser()  # Parser để chuyển đổi output về dạng string
+            )
+            refined_query = refined_query_chain.invoke({"chat_history": chat_history, "input": user_input})
+        except Exception as e:
+            logger.error(f"Lỗi khi refine query: {e}")
+            # Trường hợp lỗi, giữ nguyên câu hỏi gốc
+            refined_query = user_input
+        
+        logger.info(f"Câu hỏi sau refine: {refined_query}")
+        return refined_query
+
+
+    # Hàm sinh câu trả lời
+    def generate_response(user_input):        
+        query_generation_chain = QUERY_PROMPT | llm | output_parser
+
+        # """ ============== Reranking  RAG-Fusion ============== """
+        logger.info("Reranking RAG-Fusion...")
+        retrieval_chain_rag_fusion = (
+            query_generation_chain
+            | retriever.map()  # Truy vấn từng câu hỏi trong danh sách
+            | reciprocal_rank_fusion
+        )
+        
+        logger.info("Sinh câu trả lời...")
+        # Sử dụng LLM để sinh câu trả lời
+        final_rag_chain = (
+            {"context": retrieval_chain_rag_fusion,
+            "question": itemgetter("question"),} 
+            | qa_prompt
+            | llm
+            | StrOutputParser()
+        )
+        return final_rag_chain.invoke({"question": user_input})
+
+    # Xử lý input từ người dùng
+    if user_input := st.chat_input("Nhập câu hỏi của bạn"):
+        # Sinh câu trả lời từ user_input sau khi refine query.
+        # Refine câu hỏi dựa trên lịch sử
+        logger.info("Refine query ...")
+        refined_query = refine_query(user_input, st.session_state.messages)
+        
+        st.session_state.messages.append({"role": "user", "content": refined_query})
+        with st.chat_message("user"):
+            st.write(user_input)
+
+        # Tạo câu trả lời
+        with st.chat_message("assistant"):
+            with st.spinner("Đang suy nghĩ..."):
+                try:
+                    response = generate_response(user_input)
+                    st.write(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    logger.info("Câu trả lời đã được sinh ra thành công.")
+                except Exception as e:
+                    st.error(f"Lỗi khi sinh câu trả lời: {e}")
+                    logger.error(f"Lỗi khi sinh câu trả lời: {e}")

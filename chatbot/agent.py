@@ -18,7 +18,7 @@ def create_agent_chains(llm, retriever):
     try:
         # Tạo history-aware retriever
         logger.info("Khởi tạo history-aware retriever...")
-        history_aware_retriever = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
+        history_aware_retriever =   (llm, retriever, contextualize_q_prompt)
 
         # Tạo QA chain
         logger.info("Khởi tạo QA chain...")
