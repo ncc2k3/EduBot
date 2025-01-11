@@ -78,3 +78,11 @@ EduBot/
 │       └── chatbot.py  # Mã nguồn kiến trúc của chatbot
 └── vectorstores/       # Chứa các vector embeddings từ văn bản
 ```
+
+# Cách chạy
+
+Tạo file .env riêng
+
+thêm api google, ... vào forrmat như .envexamples
+
+gõ lệnh `streamlit run app.py`
