@@ -12,7 +12,7 @@
 
 ### **Giới thiệu**
 
-Chatbot này được tạo ra nhằm hỗ trợ sinh viên thuộc khoa công nghệ thông tin trường đại học Khoa học Tự nhiên (FIT-HCMUS) hỏi đáp về chương trình đào tạo và các thông tin cơ bản trong sổ tay sinh viên.
+Edubot được tạo ra nhằm hỗ trợ sinh viên thuộc Khoa Công nghệ Thông tin trường Đại học Khoa học Tự nhiên (FIT-HCMUS) hỏi đáp về chương trình đào tạo và các thông tin cơ bản trong sổ tay sinh viên.
 
 ### **Tính năng**
 
@@ -30,7 +30,7 @@ Chatbot này được tạo ra nhằm hỗ trợ sinh viên thuộc khoa công n
 2. Thư viện và công cụ chính
 
 - **Langchain** | Framework hỗ trợ xây dựng ứng dụng tương tác với LLM.
-- **Ollama** | Quản lý mô hình ngôn ngữ cục bộ (hỗ trợ Qwen2.5:7b, Llama3.1:8B).
+- **Ollama** | Quản lý mô hình ngôn ngữ cục bộ (hỗ trợ Llama3.1:8B).
 - **Streamlit** | Xây dựng giao diện người dùng.
 - **Chroma** | Vector database cho việc lưu trữ và truy xuất thông tin.
 - **Huggingface Transformers** | Xử lý và tương tác với các mô hình ngôn ngữ lớn.
@@ -46,9 +46,13 @@ Chatbot này được tạo ra nhằm hỗ trợ sinh viên thuộc khoa công n
    ```
    pip install -r requirements.txt
    ```
+   Đảm bảo rằng bạn đang sử dụng phiên bản pip mới nhất, để có thể nâng cấp lên phiên bản mới nhất, bản có thể sử dụng lệnh sau:
+   ```
+   python.exe -m pip install --upgrade pip
+   ```
 3. Thiết lập môi trường
-   - Tạo file .env chứa nội dung có cấu trúc giống như file .envexamples
-   - Đổi thành API KEY của bạn trong file .env để sử dụng google api gọi mô hình bên ngoài
+   - Tạo file .env chứa nội dung có cấu trúc giống như file .env.examples
+   - Thay đổi `GOOGLE API KEY` trong file .env thành api của bạn để sử dụng google api gọi mô hình bên ngoài
        
 4. Khởi chạy ứng dụng
    ```
@@ -68,16 +72,17 @@ Chatbot này được tạo ra nhằm hỗ trợ sinh viên thuộc khoa công n
 
 ```plaintext
 EduBot/
-├── README.md           # Tài liệu hướng dẫn chạy chương trình
-├── app.py              # Tệp chính chạy ứng dụng Streamlit
-├── requirements.txt    # Danh sách thư viện cần thiết
-├── configs/            # Cấu hình ứng dụng
-│   └── settings.py     # File cấu hình chính
-├── data/               # Thư mục chứa dữ liệu
-│   ├── docs/           # Các tài liệu sử dụng
-│   ├── test/           # Bộ dữ liệu kiểm tra mô hình
-│   └── readme.md       # Mô tả về dataset
-├── vectorstores/       # Chứa các vector embeddings từ văn bản
-└── .envexamples        # Chứa cấu trúc ví dụ của file .env cần tạo để chạy chương trình
+├── README.md                 # Tài liệu hướng dẫn sử dụng chương trình
+├── app.py                    # Tệp chính chạy ứng dụng Streamlit
+├── requirements.txt          # Danh sách thư viện cần thiết
+├── config.py                 # Cấu hình ứng dụng
+├── prompt.py                 # Chứa các prompt hướng dẫn cho mô hình
+├── data/                     # Thư mục chứa dữ liệu
+│   ├── docs/                 # Các tài liệu sử dụng
+│   ├── test/                 # Bộ dữ liệu kiểm tra mô hình
+│   └── readme.md             # Mô tả về dataset
+├── vectorstores/             # Chứa các vector embeddings từ văn bản
+├── create_vectorstore.py     # Dùng để tạo vectorstore cho bộ dữ liệu
+└── .env.examples             # Chứa cấu trúc ví dụ của file .env cần tạo để chạy chương trình
 
 ```
